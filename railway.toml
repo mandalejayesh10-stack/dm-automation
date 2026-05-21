@@ -1,0 +1,9 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm --workspace @aisma/database run generate && npm --workspace @aisma/api run build"
+
+[deploy]
+startCommand = "npm --workspace @aisma/api run start"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"

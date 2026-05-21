@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm install && npm --workspace @aisma/web run build",
+  "devCommand": "npm --workspace @aisma/web run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": "apps/web/.next"
+}

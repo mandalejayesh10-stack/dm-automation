@@ -1,0 +1,522 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum SocialProvider {
+  INSTAGRAM
+  FACEBOOK
+}
+
+enum AutomationStatus {
+  DRAFT
+  LIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  CLOSED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  PAUSED
+}
+
+model User {
+  id              String       @id @default(cuid())
+  authProvider    String       @default("google")
+  authProviderId  String       @unique
+  email           String       @unique
+  name            String?
+  imageUrl        String?
+  onboardingComplete Boolean    @default(false)
+  lastLoginAt     DateTime?
+  brands          Brand[]
+  teamMemberships TeamMember[]
+  notifications Notification[]
+  metaOAuthSessions MetaOAuthSession[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Brand {
+  id             String          @id @default(cuid())
+  ownerId        String
+  name           String
+  slug           String          @unique
+  logoUrl        String?
+  owner          User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  socialAccounts SocialAccount[]
+  automations    Automation[]
+  leads          Lead[]
+  analytics      AnalyticsEvent[]
+  templates      Template[]
+  conversations  Conversation[]
+  teamMembers    TeamMember[]
+  subscription   Subscription?
+  webhookEvents  WebhookEvent[]
+  workflowRuns   WorkflowRun[]
+  automationExecutions AutomationExecution[]
+  executionLogs  ExecutionLog[]
+  messageDeliveries MessageDelivery[]
+  leadEvents     LeadEvent[]
+  instagramMediaItems InstagramMediaItem[]
+  instagramMediaAutomations InstagramMediaAutomation[]
+  reelAutomations ReelAutomation[]
+  reelExecutions ReelAutomationExecution[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([ownerId])
+}
+
+model SocialAccount {
+  id                 String          @id @default(cuid())
+  brandId            String
+  provider           SocialProvider
+  externalId         String
+  accountName        String?
+  username           String?
+  profilePictureUrl  String?
+  pageId             String?
+  instagramBusinessId String?
+  encryptedAccessToken String
+  tokenExpiresAt     DateTime?
+  permissions        String[]
+  webhookStatus      String          @default("pending")
+  isActive           Boolean         @default(true)
+  brand              Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  conversations      Conversation[]
+  webhookEvents      WebhookEvent[]
+  messageDeliveries  MessageDelivery[]
+  instagramMediaItems InstagramMediaItem[]
+  instagramMediaAutomations InstagramMediaAutomation[]
+  reelAutomations ReelAutomation[]
+  reelExecutions     ReelAutomationExecution[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([provider, externalId])
+  @@index([brandId])
+}
+
+model MetaOAuthSession {
+  id              String   @id @default(cuid())
+  userId          String
+  brandId         String?
+  state           String   @unique
+  status          String   @default("pending")
+  encryptedPayload String?
+  expiresAt       DateTime
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, expiresAt])
+}
+
+model WebhookEvent {
+  id                  String           @id @default(cuid())
+  brandId             String
+  provider            String
+  eventType           String
+  socialAccountId     String?
+  externalId          String?
+  externalConversationId String?
+  rawPayload          Json
+  signature           String?
+  status              String           @default("received")
+  retryCount          Int              @default(0)
+  failureReason       String?
+  receivedAt          DateTime         @default(now())
+  processedAt         DateTime?
+  brand               Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  socialAccount       SocialAccount?   @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  workflowRuns        WorkflowRun[]
+  automationExecutions AutomationExecution[]
+  leadEvents          LeadEvent[]
+  reelExecutions      ReelAutomationExecution[]
+
+  @@index([brandId, provider, eventType, receivedAt])
+  @@index([socialAccountId, receivedAt])
+}
+
+model TriggerRule {
+  id            String   @id @default(cuid())
+  automationId   String
+  type          String
+  operator      String
+  value         String?
+  values        String[]
+  caseSensitive Boolean  @default(false)
+  negated       Boolean  @default(false)
+  config        Json?
+  automation    Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([automationId, type])
+}
+
+model WorkflowRun {
+  id               String   @id @default(cuid())
+  brandId          String
+  automationId     String
+  webhookEventId   String?
+  executionId      String?  @unique
+  triggerType      String
+  status           String   @default("queued")
+  startedAt        DateTime @default(now())
+  completedAt      DateTime?
+  failureReason    String?
+  brand            Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  automation       Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  webhookEvent     WebhookEvent? @relation(fields: [webhookEventId], references: [id], onDelete: SetNull)
+  execution        AutomationExecution?
+  logs             ExecutionLog[]
+  messageDeliveries MessageDelivery[]
+
+  @@index([brandId, automationId, status, startedAt])
+}
+
+model AutomationExecution {
+  id               String   @id @default(cuid())
+  brandId          String
+  automationId     String
+  webhookEventId   String?
+  workflowRunId    String?   @unique
+  triggerSource    String
+  triggerValue    String?
+  status          String    @default("queued")
+  currentNodeId   String?
+  retryCount      Int       @default(0)
+  failureReason   String?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  brand           Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  automation      Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  webhookEvent    WebhookEvent? @relation(fields: [webhookEventId], references: [id], onDelete: SetNull)
+  workflowRun     WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+  logs            ExecutionLog[]
+  deliveries      MessageDelivery[]
+  leadEvents      LeadEvent[]
+
+  @@index([brandId, automationId, status, startedAt])
+}
+
+model ExecutionLog {
+  id              String   @id @default(cuid())
+  brandId         String
+  executionId     String?
+  workflowRunId    String?
+  nodeId          String?
+  level           String   @default("info")
+  message         String
+  payload         Json?
+  createdAt       DateTime @default(now())
+  brand           Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  execution       AutomationExecution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  workflowRun     WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, createdAt])
+}
+
+model MessageDelivery {
+  id                String   @id @default(cuid())
+  brandId           String
+  executionId       String?
+  workflowRunId     String?
+  socialAccountId   String?
+  conversationId    String?
+  externalConversationId String?
+  direction         String   @default("outbound")
+  provider          String
+  status            String   @default("queued")
+  providerMessageId String?
+  messageBody       String
+  metadata          Json?
+  errorReason       String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  brand             Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  execution         AutomationExecution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  workflowRun       WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+  socialAccount     SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  reelExecutions    ReelAutomationExecution[]
+
+  @@index([brandId, status, sentAt])
+}
+
+model LeadEvent {
+  id              String   @id @default(cuid())
+  brandId         String
+  leadId          String?
+  webhookEventId   String?
+  executionId     String?
+  source          String
+  eventType       String
+  payload         Json?
+  brand           Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  lead            Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  webhookEvent    WebhookEvent? @relation(fields: [webhookEventId], references: [id], onDelete: SetNull)
+  execution       AutomationExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+
+  @@index([brandId, source, eventType, createdAt])
+}
+
+model InstagramMediaItem {
+  id              String   @id @default(cuid())
+  brandId         String
+  socialAccountId String
+  mediaId         String
+  mediaType       String
+  caption         String?
+  permalink       String?
+  thumbnailUrl    String?
+  timestamp       DateTime?
+  likeCount       Int?
+  commentsCount   Int?
+  rawPayload      Json?
+  brand           Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  automation      InstagramMediaAutomation?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([socialAccountId, mediaId])
+  @@index([brandId, socialAccountId, timestamp])
+}
+
+model InstagramMediaAutomation {
+  id              String   @id @default(cuid())
+  brandId         String
+  socialAccountId String
+  mediaId         String
+  keyword         String
+  dmTemplate      String
+  commentReply    String?
+  aiEnabled       Boolean  @default(false)
+  delaySeconds    Int      @default(0)
+  leadTag         String?
+  enabled         Boolean  @default(true)
+  matchMode       String   @default("contains")
+  mediaCacheId    String?  @unique
+  brand           Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  mediaCache      InstagramMediaItem? @relation(fields: [mediaCacheId], references: [id], onDelete: SetNull)
+  executions      ReelAutomationExecution[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([socialAccountId, mediaId])
+  @@index([brandId, enabled, keyword])
+}
+
+model ReelAutomation {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  reelId        String
+  mediaId       String
+  socialAccountId String?
+  keyword       String
+  dmTemplate    String
+  commentReply  String?
+  contentUrl    String?
+  enabled       Boolean  @default(true)
+  brand         Brand    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([workspaceId, reelId])
+  @@index([workspaceId, enabled])
+}
+
+model ReelAutomationExecution {
+  id                   String   @id @default(cuid())
+  brandId              String
+  socialAccountId      String
+  instagramMediaAutomationId String
+  webhookEventId       String?
+  leadId               String?
+  messageDeliveryId    String?
+  triggerKeyword       String
+  commentText          String
+  commenterId          String?
+  commenterName        String?
+  commenterHandle      String?
+  status               String   @default("queued")
+  failureReason        String?
+  startedAt            DateTime @default(now())
+  completedAt          DateTime?
+  brand                Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  socialAccount        SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  config               InstagramMediaAutomation @relation(fields: [instagramMediaAutomationId], references: [id], onDelete: Cascade)
+  webhookEvent         WebhookEvent? @relation(fields: [webhookEventId], references: [id], onDelete: SetNull)
+  lead                 Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  messageDelivery      MessageDelivery? @relation(fields: [messageDeliveryId], references: [id], onDelete: SetNull)
+
+  @@index([brandId, startedAt])
+}
+
+model Automation {
+  id          String             @id @default(cuid())
+  brandId     String
+  name        String
+  status      AutomationStatus   @default(DRAFT)
+  triggerType String
+  triggerRules Json
+  brand       Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  nodes       AutomationNode[]
+  triggerRuleRows TriggerRule[]
+  workflowRuns WorkflowRun[]
+  automationExecutions AutomationExecution[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([brandId, status])
+}
+
+model AutomationNode {
+  id           String     @id @default(cuid())
+  automationId String
+  type         String
+  position     Json
+  config       Json
+  nextNodeIds  String[]
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  brandId     String
+  source      String
+  name        String?
+  email       String?
+  phone       String?
+  socialHandle String?
+  score       Int      @default(0)
+  tags        String[]
+  metadata    Json?
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  leadEvents  LeadEvent[]
+  reelExecutions ReelAutomationExecution[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([brandId, email])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  brandId   String
+  type      String
+  value     Decimal  @default(1)
+  metadata  Json?
+  occurredAt DateTime @default(now())
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, type, occurredAt])
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  brandId   String
+  name      String
+  category  String
+  content   Json
+  isPublic  Boolean  @default(false)
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  brandId            String             @unique
+  provider           String
+  plan               String
+  status             SubscriptionStatus
+  stripeCustomerId   String?
+  stripeSubscriptionId String?
+  razorpaySubscriptionId String?
+  currentPeriodEnd   DateTime?
+  usage              Json?
+  brand              Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  readAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id              String             @id @default(cuid())
+  brandId         String
+  socialAccountId String?
+  externalId      String
+  status          ConversationStatus @default(OPEN)
+  labels          String[]
+  brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount?     @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  messages        Message[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([brandId, externalId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  direction      String
+  senderId       String?
+  body           String
+  aiGenerated    Boolean      @default(false)
+  metadata       Json?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  brandId   String
+  userId    String
+  role      Role     @default(VIEWER)
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([brandId, userId])
+}
