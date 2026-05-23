@@ -1,6 +1,6 @@
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE } from "@/lib/auth-constants";
+import { AUTH_COOKIE } from "./lib/auth-constants";
 
 const protectedRoutes = ["/dashboard", "/flow-builder", "/inbox", "/admin"];
 const publicAuthRoutes = ["/", "/sign-in"];

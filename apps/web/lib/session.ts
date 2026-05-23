@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
-import { AUTH_COOKIE } from "@/lib/auth-constants";
+import { AUTH_COOKIE } from "./auth-constants";
 
 export type SessionClaims = {
   uid: string;
