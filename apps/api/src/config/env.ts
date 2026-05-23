@@ -3,6 +3,23 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { z } from "zod";
 
+function resolveDatabaseUrl() {
+  const direct = process.env.DATABASE_URL ?? process.env.RAILWAY_DATABASE_URL ?? process.env.POSTGRES_URL ?? process.env.POSTGRES_CONNECTION_STRING ?? process.env.DATABASE_PUBLIC_URL;
+  if (direct && direct.trim().length > 0) return direct.trim();
+
+  const host = process.env.PGHOST ?? process.env.POSTGRES_HOST ?? process.env.RAILWAY_POSTGRES_HOST;
+  const port = process.env.PGPORT ?? process.env.POSTGRES_PORT ?? process.env.RAILWAY_POSTGRES_PORT ?? "5432";
+  const user = process.env.PGUSER ?? process.env.POSTGRES_USER ?? process.env.RAILWAY_POSTGRES_USER;
+  const password = process.env.PGPASSWORD ?? process.env.POSTGRES_PASSWORD ?? process.env.RAILWAY_POSTGRES_PASSWORD;
+  const database = process.env.PGDATABASE ?? process.env.POSTGRES_DB ?? process.env.RAILWAY_POSTGRES_DB;
+
+  if (host && user && password && database) {
+    return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+  }
+
+  return "";
+}
+
 const repoRoot = path.resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const dotenvCandidates = [
   path.join(repoRoot, ".env"),
@@ -12,6 +29,13 @@ const dotenvCandidates = [
 
 for (const candidate of dotenvCandidates) {
   loadDotenv({ path: candidate, override: false });
+}
+
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim().length === 0) {
+  const resolvedDatabaseUrl = resolveDatabaseUrl();
+  if (resolvedDatabaseUrl) {
+    process.env.DATABASE_URL = resolvedDatabaseUrl;
+  }
 }
 
 const envSchema = z.object({
