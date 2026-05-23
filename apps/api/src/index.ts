@@ -6,7 +6,7 @@ import { Server } from "socket.io";
 import { env } from "./config/env.js";
 import { applySecurity } from "./middleware/security.js";
 import { issueCsrfToken, requireCsrf } from "./middleware/csrf.js";
-import { metaRouter } from "./routes/meta.routes.js";
+import { metaRouter, publicMetaWebhookRouter } from "./routes/meta.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { billingRouter } from "./routes/billing.routes.js";
 import { appRouter } from "./routes/app.routes.js";
@@ -40,6 +40,7 @@ app.use("/api/auth", authRouter);
 app.use(requireCsrf);
 app.use("/api", appRouter);
 app.use("/api/meta", metaRouter);
+app.use("/webhook", publicMetaWebhookRouter);
 app.use("/api/billing", billingRouter);
 
 io.on("connection", (socket) => {

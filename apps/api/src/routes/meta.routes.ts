@@ -25,6 +25,7 @@ import {
 import { enqueueWebhookEvent } from "../queues/automation.queue.js";
 
 export const metaRouter = Router();
+export const publicMetaWebhookRouter = Router();
 
 type AuthedUser = {
   id: string;
@@ -479,7 +480,7 @@ metaRouter.post("/accounts/:accountId/reconnect", requireCsrf, async (req, res) 
   return res.json({ authUrl: buildMetaOAuthUrl(state) });
 });
 
-metaRouter.post("/webhook", async (req, res, next) => {
+async function handleMetaWebhookPost(req: Request, res: any, next: any) {
   try {
     const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
     const signature = req.header("x-hub-signature-256") ?? undefined;
@@ -548,9 +549,9 @@ metaRouter.post("/webhook", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+}
 
-metaRouter.get("/webhook", (req, res) => {
+function handleMetaWebhookGet(req: Request, res: any) {
   const mode = typeof req.query["hub.mode"] === "string" ? req.query["hub.mode"] : null;
   const token = typeof req.query["hub.verify_token"] === "string" ? req.query["hub.verify_token"] : null;
   const challenge = typeof req.query["hub.challenge"] === "string" ? req.query["hub.challenge"] : null;
@@ -564,4 +565,9 @@ metaRouter.get("/webhook", (req, res) => {
   }
 
   return res.sendStatus(403);
-});
+}
+
+metaRouter.post("/webhook", handleMetaWebhookPost);
+metaRouter.get("/webhook", handleMetaWebhookGet);
+publicMetaWebhookRouter.post("/", handleMetaWebhookPost);
+publicMetaWebhookRouter.get("/", handleMetaWebhookGet);

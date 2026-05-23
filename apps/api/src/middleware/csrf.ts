@@ -10,7 +10,7 @@ export function issueCsrfToken(_req: Request, res: Response) {
 
 export function requireCsrf(req: Request, res: Response, next: NextFunction) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
-  if (req.path.startsWith("/api/meta/webhook") || req.path.startsWith("/api/billing/stripe/webhook")) return next();
+  if (req.path.startsWith("/api/meta/webhook") || req.path.startsWith("/webhook") || req.path.startsWith("/api/billing/stripe/webhook")) return next();
   const cookieToken = req.cookies?.csrf_token;
   const headerToken = req.header("x-csrf-token");
   if (!cookieToken || !headerToken || cookieToken !== headerToken) return res.status(403).json({ error: "Invalid CSRF token" });
