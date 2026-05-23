@@ -4,14 +4,42 @@ import path from "node:path";
 import { z } from "zod";
 
 function resolveDatabaseUrl() {
-  const direct = process.env.DATABASE_URL ?? process.env.RAILWAY_DATABASE_URL ?? process.env.POSTGRES_URL ?? process.env.POSTGRES_CONNECTION_STRING ?? process.env.DATABASE_PUBLIC_URL;
+  const direct =
+    process.env.DATABASE_URL ??
+    process.env.RAILWAY_DATABASE_URL ??
+    process.env.RAILWAY_DATABASE_URL_UNPOOLED ??
+    process.env.RAILWAY_DATABASE_PRIVATE_URL ??
+    process.env.RAILWAY_POSTGRES_URL ??
+    process.env.RAILWAY_POSTGRESQL_URL ??
+    process.env.DATABASE_PRIVATE_URL ??
+    process.env.DATABASE_PUBLIC_URL ??
+    process.env.DATABASE_URL_UNPOOLED ??
+    process.env.POSTGRES_URL ??
+    process.env.POSTGRES_URL_NON_POOLING ??
+    process.env.POSTGRESQL_URL ??
+    process.env.POSTGRESQL_URL_NON_POOLING ??
+    process.env.POSTGRES_PRISMA_URL ??
+    process.env.POSTGRES_CONNECTION_STRING ??
+    process.env.POSTGRES_DB_URL ??
+    process.env.NEON_DATABASE_URL ??
+    process.env.SUPABASE_DATABASE_URL;
   if (direct && direct.trim().length > 0) return direct.trim();
 
-  const host = process.env.PGHOST ?? process.env.POSTGRES_HOST ?? process.env.RAILWAY_POSTGRES_HOST;
-  const port = process.env.PGPORT ?? process.env.POSTGRES_PORT ?? process.env.RAILWAY_POSTGRES_PORT ?? "5432";
-  const user = process.env.PGUSER ?? process.env.POSTGRES_USER ?? process.env.RAILWAY_POSTGRES_USER;
-  const password = process.env.PGPASSWORD ?? process.env.POSTGRES_PASSWORD ?? process.env.RAILWAY_POSTGRES_PASSWORD;
-  const database = process.env.PGDATABASE ?? process.env.POSTGRES_DB ?? process.env.RAILWAY_POSTGRES_DB;
+  const host =
+    process.env.PGHOST ??
+    process.env.POSTGRES_HOST ??
+    process.env.RAILWAY_POSTGRES_HOST ??
+    process.env.DATABASE_HOST ??
+    process.env.POSTGRESQL_HOST;
+  const port = process.env.PGPORT ?? process.env.POSTGRES_PORT ?? process.env.RAILWAY_POSTGRES_PORT ?? process.env.DATABASE_PORT ?? "5432";
+  const user = process.env.PGUSER ?? process.env.POSTGRES_USER ?? process.env.RAILWAY_POSTGRES_USER ?? process.env.DATABASE_USER ?? process.env.POSTGRESQL_USER;
+  const password =
+    process.env.PGPASSWORD ??
+    process.env.POSTGRES_PASSWORD ??
+    process.env.RAILWAY_POSTGRES_PASSWORD ??
+    process.env.DATABASE_PASSWORD ??
+    process.env.POSTGRESQL_PASSWORD;
+  const database = process.env.PGDATABASE ?? process.env.POSTGRES_DB ?? process.env.RAILWAY_POSTGRES_DB ?? process.env.DATABASE_NAME ?? process.env.POSTGRESQL_DB;
 
   if (host && user && password && database) {
     return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
@@ -45,7 +73,7 @@ const envSchema = z.object({
   API_URL: z.string().url().default("http://localhost:4000"),
   BACKEND_URL: z.string().url().optional(),
   BACKEND_INTERNAL_URL: z.string().url().optional(),
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z.string().default(""),
   REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
   DISABLE_QUEUES: z.coerce.boolean().default(false),
   TOKEN_ENCRYPTION_KEY: z.string().min(16),
@@ -76,3 +104,7 @@ const envSchema = z.object({
 });
 
 export const env = envSchema.parse(process.env);
+
+if (!env.DATABASE_URL) {
+  console.warn("[env] DATABASE_URL is not configured. Database-backed routes will fail until Railway/Postgres is attached.");
+}
