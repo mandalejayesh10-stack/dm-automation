@@ -35,6 +35,7 @@ app.use(
 );
 
 app.get("/health", (_req, res) => res.json({ ok: true, service: "aisma-api" }));
+app.get("/", (_req, res) => res.status(200).json({ ok: true, service: "aisma-api", status: "running" }));
 app.get("/api/csrf", issueCsrfToken);
 app.use("/api/auth", authRouter);
 app.use(requireCsrf);
