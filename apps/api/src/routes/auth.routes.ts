@@ -26,6 +26,25 @@ function clearOauthCookies(res: Response) {
     .clearCookie(OAUTH_RETURN_TO_COOKIE, { path: "/" });
 }
 
+function authCookieOptions() {
+  const sameSite: "none" | "lax" = env.NODE_ENV === "production" ? "none" : "lax";
+  return {
+    httpOnly: true,
+    sameSite,
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    maxAge: sessionCookieMaxAge(),
+    ...(env.AUTH_COOKIE_DOMAIN ? { domain: env.AUTH_COOKIE_DOMAIN } : {})
+  };
+}
+
+function authCookieClearOptions() {
+  return {
+    path: "/",
+    ...(env.AUTH_COOKIE_DOMAIN ? { domain: env.AUTH_COOKIE_DOMAIN } : {})
+  };
+}
+
 authRouter.get("/google", (req, res) => {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     return res.status(503).json({ error: "Google OAuth is not configured" });
@@ -106,13 +125,7 @@ authRouter.get("/google/callback", async (req, res) => {
 
     clearOauthCookies(res);
     return res
-      .cookie(AUTH_COOKIE, session, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: env.NODE_ENV === "production",
-        path: "/",
-        maxAge: sessionCookieMaxAge()
-      })
+      .cookie(AUTH_COOKIE, session, authCookieOptions())
       .redirect(returnToCookie ?? `${env.APP_URL}/dashboard`);
   } catch (error) {
     console.error(error);
@@ -143,7 +156,7 @@ authRouter.get("/session", requireAuth, async (req, res) => {
 
 authRouter.post("/logout", requireAuth, async (_req, res) => {
   res
-    .clearCookie(AUTH_COOKIE, { path: "/" })
+    .clearCookie(AUTH_COOKIE, authCookieClearOptions())
     .clearCookie(OAUTH_STATE_COOKIE, { path: "/" })
     .clearCookie(OAUTH_VERIFIER_COOKIE, { path: "/" })
     .clearCookie(OAUTH_RETURN_TO_COOKIE, { path: "/" })

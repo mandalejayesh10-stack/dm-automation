@@ -2,9 +2,10 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/lib/store";
-import { getBackendUrl } from "@/lib/backend";
+import { getAuthBackendUrl, getMetaBackendUrl } from "@/lib/backend";
 
-const API_URL = getBackendUrl();
+const API_URL = getAuthBackendUrl();
+const META_API_URL = getMetaBackendUrl();
 
 export type Brand = {
   id: string;
@@ -263,8 +264,8 @@ export type DashboardData = {
   automations: Automation[];
 };
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+async function apiFetch<T>(path: string, baseUrl: string = API_URL): Promise<T> {
+  const response = await fetch(`${baseUrl}${path}`, {
     credentials: "include",
     headers: {
       Accept: "application/json"
@@ -278,10 +279,10 @@ async function apiFetch<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const csrfResponse = await fetch(`${API_URL}/api/csrf`, { credentials: "include" });
+async function apiPost<T>(path: string, body?: unknown, baseUrl: string = API_URL): Promise<T> {
+  const csrfResponse = await fetch(`${baseUrl}/api/csrf`, { credentials: "include" });
   const csrfJson = (await csrfResponse.json()) as { csrfToken: string };
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -464,13 +465,13 @@ export function useSaveReelAutomation() {
 export function useMetaOAuthSession() {
   return useQuery({
     queryKey: ["meta-oauth-session"],
-    queryFn: () => apiFetch<MetaOAuthSession>("/api/meta/oauth/session"),
+    queryFn: () => apiFetch<MetaOAuthSession>("/api/meta/oauth/session", META_API_URL),
     refetchInterval: 5_000
   });
 }
 
 export async function startMetaOAuth(brandId?: string | null) {
-  const url = new URL(`${API_URL}/api/meta/oauth/start`);
+  const url = new URL(`${META_API_URL}/api/meta/oauth/start`);
   if (brandId) url.searchParams.set("brandId", brandId);
 
   const response = await fetch(url, {
@@ -500,18 +501,18 @@ export async function startMetaOAuth(brandId?: string | null) {
 export function useCompleteMetaOAuth() {
   return useMutation({
     mutationFn: (body: { brandId: string; selectedPageIds: string[] }) =>
-      apiPost<{ ok: boolean; connected: number; brandId: string }>("/api/meta/oauth/complete", body)
+      apiPost<{ ok: boolean; connected: number; brandId: string }>("/api/meta/oauth/complete", body, META_API_URL)
   });
 }
 
 export function useDisconnectMetaAccount() {
   return useMutation({
-    mutationFn: (accountId: string) => apiPost<{ ok: boolean }>(`/api/meta/accounts/${accountId}/disconnect`)
+    mutationFn: (accountId: string) => apiPost<{ ok: boolean }>(`/api/meta/accounts/${accountId}/disconnect`, undefined, META_API_URL)
   });
 }
 
 export function useReconnectMetaAccount() {
   return useMutation({
-    mutationFn: (accountId: string) => apiPost<{ authUrl: string }>(`/api/meta/accounts/${accountId}/reconnect`)
+    mutationFn: (accountId: string) => apiPost<{ authUrl: string }>(`/api/meta/accounts/${accountId}/reconnect`, undefined, META_API_URL)
   });
 }

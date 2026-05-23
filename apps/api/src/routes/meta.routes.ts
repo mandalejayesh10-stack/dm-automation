@@ -105,9 +105,10 @@ async function resolveMetaOAuthContext(state: string) {
 }
 
 function metaStateCookie(state: string) {
+  const sameSite: "none" | "lax" = env.NODE_ENV === "production" ? "none" : "lax";
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite,
     secure: env.NODE_ENV === "production",
     path: "/",
     maxAge: 15 * 60 * 1000

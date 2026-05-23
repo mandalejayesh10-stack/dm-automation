@@ -82,6 +82,7 @@ const envSchema = z.object({
   GOOGLE_CALLBACK_URL: z.string().url().optional(),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRY: z.string().default("7d"),
+  AUTH_COOKIE_DOMAIN: z.string().optional(),
   META_APP_ID: z.string().optional(),
   META_APP_SECRET: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),

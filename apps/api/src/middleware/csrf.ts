@@ -4,7 +4,11 @@ import { env } from "../config/env.js";
 
 export function issueCsrfToken(_req: Request, res: Response) {
   const token = crypto.randomBytes(32).toString("base64url");
-  res.cookie("csrf_token", token, { httpOnly: true, sameSite: "lax", secure: env.NODE_ENV === "production" });
+  res.cookie("csrf_token", token, {
+    httpOnly: true,
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    secure: env.NODE_ENV === "production"
+  });
   res.json({ csrfToken: token });
 }
 

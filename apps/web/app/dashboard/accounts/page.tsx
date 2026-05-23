@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Facebook, Instagram, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { EmptyState, PageError, SkeletonBlock } from "@/components/dashboard/data-states";
-import { getBackendOrigin } from "@/lib/backend";
+import { getMetaBackendOrigin } from "@/lib/backend";
 import {
   startMetaOAuth,
   useAccounts,
@@ -16,7 +16,7 @@ import {
   useReconnectMetaAccount
 } from "@/src/hooks/use-api";
 
-const BACKEND_ORIGIN = getBackendOrigin();
+const BACKEND_ORIGIN = getMetaBackendOrigin();
 
 export default function AccountsPage() {
   const accounts = useAccounts();

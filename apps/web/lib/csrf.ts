@@ -1,6 +1,6 @@
-import { getBackendUrl } from "@/lib/backend";
+import { getAuthBackendUrl } from "@/lib/backend";
 
-const API_URL = getBackendUrl();
+const API_URL = getAuthBackendUrl();
 
 export async function getCsrfToken() {
   const response = await fetch(`${API_URL}/api/csrf`, { credentials: "include" });

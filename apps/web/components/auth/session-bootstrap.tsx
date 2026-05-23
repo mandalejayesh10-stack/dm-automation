@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
-import { getBackendUrl } from "@/lib/backend";
+import { getAuthBackendUrl } from "@/lib/backend";
 
-const API_URL = getBackendUrl();
+const API_URL = getAuthBackendUrl();
 
 type SessionResponse = {
   user: {

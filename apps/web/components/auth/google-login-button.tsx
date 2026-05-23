@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { getBackendUrl } from "@/lib/backend";
+import { getAuthBackendUrl } from "@/lib/backend";
 
-const API_URL = getBackendUrl();
+const API_URL = getAuthBackendUrl();
 
 export function GoogleLoginButton({
   label,

@@ -6,10 +6,10 @@ import { Bot, Search, Send, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { EmptyState, PageError, SkeletonBlock } from "@/components/dashboard/data-states";
-import { getBackendUrl } from "@/lib/backend";
+import { getAuthBackendUrl } from "@/lib/backend";
 import { useActiveBrandId, useInbox } from "@/src/hooks/use-api";
 
-const SOCKET_URL = getBackendUrl();
+const SOCKET_URL = getAuthBackendUrl();
 
 export default function InboxPage() {
   const inbox = useInbox();

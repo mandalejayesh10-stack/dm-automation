@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Bell, Bot, Clapperboard, CreditCard, Home, Inbox, KeyRound, LayoutTemplate, Menu, Network, Settings, Users, Workflow, X } from "lucide-react";
 import { BrandSwitcher } from "@/components/brand-switcher";
-import { getBackendUrl } from "@/lib/backend";
+import { getAuthBackendUrl } from "@/lib/backend";
 import { getCsrfToken } from "@/lib/csrf";
 import { useAppStore } from "@/lib/store";
 import { useAccounts } from "@/src/hooks/use-api";
@@ -35,7 +35,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     const csrfToken = await getCsrfToken();
-    await fetch(`${getBackendUrl()}/api/auth/logout`, {
+    await fetch(`${getAuthBackendUrl()}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: { "x-csrf-token": csrfToken }
