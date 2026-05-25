@@ -40,6 +40,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       credentials: "include",
       headers: { "x-csrf-token": csrfToken }
     });
+    await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/";
   };
 

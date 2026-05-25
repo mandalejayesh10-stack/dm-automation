@@ -124,9 +124,13 @@ authRouter.get("/google/callback", async (req, res) => {
     });
 
     clearOauthCookies(res);
+    const frontendBridgeUrl = new URL("/api/auth/bridge", env.APP_URL);
+    frontendBridgeUrl.searchParams.set("session", session);
+    frontendBridgeUrl.searchParams.set("returnTo", returnToCookie ?? `${env.APP_URL}/dashboard`);
+
     return res
       .cookie(AUTH_COOKIE, session, authCookieOptions())
-      .redirect(returnToCookie ?? `${env.APP_URL}/dashboard`);
+      .redirect(frontendBridgeUrl.toString());
   } catch (error) {
     console.error(error);
     clearOauthCookies(res);
